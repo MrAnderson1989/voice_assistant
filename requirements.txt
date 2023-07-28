@@ -1,0 +1,6 @@
+
+numpy==1.24.4
+pyaudio==0.2.13
+PySocks==1.7.1
+requests==2.31.0
+pygame==2.5.0
