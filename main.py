@@ -40,7 +40,7 @@ class Jarvis:
         
         frames = self.audio_recorder.record_audio(audio_stream)
 
-        question_text = self.tencent_asr.recognize(frames)
+        question_text = self.tencent_asr.flash_recognize(frames)
 
         print('question_text:'+question_text)
 

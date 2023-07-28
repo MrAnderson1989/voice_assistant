@@ -9,11 +9,14 @@ from tencentcloud.common.profile.client_profile import ClientProfile
 from tencentcloud.common.profile.http_profile import HttpProfile
 from tencentcloud.asr.v20190614 import asr_client
 from tencentcloud.tts.v20190823 import tts_client
+import config
+
 
 # Define the TencentASR class
 class TencentASR:
     def __init__(self, secret_id, secret_key):
         self.region = config.REGION
+        self.app_id = config.APP_ID
         self.secret_id = config.SECRET_ID
         self.secret_key = config.SECRET_KEY
         self.cred = credential.Credential(secret_id, secret_key)
@@ -21,6 +24,31 @@ class TencentASR:
         self.client_profile = ClientProfile()
         self.client_profile.httpProfile = self.http_profile
 
+    def flash_recognize(self,frames):
+        # 新建FlashRecognizer，一个recognizer可以执行N次识别请求
+        recognizer = FlashRecognizer()
+
+        # 新建识别请求
+        req = FlashRecognitionRequest("16k_zh")
+        req.set_filter_modal(0)
+        req.set_filter_punc(0)
+        req.set_filter_dirty(0)
+        req.set_voice_format("wav")
+        req.set_word_info(0)
+        req.set_convert_num_mode(1)
+        
+        #执行识别
+        resultData = recognizer.recognize(req, frames.getvalue())
+        resp = json.loads(resultData)
+        request_id = resp["request_id"]
+        code = resp["code"]
+        if code != 0:
+            print("recognize faild! request_id: ", request_id, " code: ", code, ", message: ", resp["message"])
+            exit(0)
+
+        if resp["flash_result"][0]!=None:
+            return resp["flash_result"][0]["text"]
+    
     def recognize(self, frames):
         # This method uses the Tencent ASR service to transcribe audio
         # It takes a byte stream of audio frames as input
@@ -115,7 +143,61 @@ import hashlib
 import base64
 import time
 import json
-import config
+
+
+
+#录音识别极速版使用
+class FlashRecognitionRequest:
+    def __init__(self, engine_type):
+        self.engine_type = engine_type
+        self.speaker_diarization = 0
+        self.hotword_id = ""
+        self.customization_id = ""
+        self.filter_dirty = 0
+        self.filter_modal = 0
+        self.filter_punc = 0
+        self.convert_num_mode = 1
+        self.word_info = 0
+        self.voice_format = ""
+        self.first_channel_only = 1
+        self.reinforce_hotword = 0
+        self.sentence_max_length = 0
+
+    def set_first_channel_only(self, first_channel_only):
+        self.first_channel_only = first_channel_only
+
+    def set_speaker_diarization(self, speaker_diarization):
+        self.speaker_diarization = speaker_diarization
+
+    def set_filter_dirty(self, filter_dirty):
+        self.filter_dirty = filter_dirty
+
+    def set_filter_modal(self, filter_modal):
+        self.filter_modal = filter_modal
+
+    def set_filter_punc(self, filter_punc):
+        self.filter_punc = filter_punc
+
+    def set_convert_num_mode(self, convert_num_mode):
+        self.convert_num_mode = convert_num_mode
+
+    def set_word_info(self, word_info):
+        self.word_info = word_info
+
+    def set_hotword_id(self, hotword_id):
+        self.hotword_id = hotword_id
+
+    def set_customization_id(self, customization_id):
+        self.customization_id = customization_id
+
+    def set_voice_format(self, voice_format):
+        self.voice_format = voice_format
+
+    def set_sentence_max_length(self, sentence_max_length):
+        self.sentence_max_length = sentence_max_length
+
+    def set_reinforce_hotword(self, reinforce_hotword):
+        self.reinforce_hotword = reinforce_hotword
 
 class FlashRecognizer:
     def __init__(self):
@@ -163,29 +245,29 @@ class FlashRecognizer:
         requrl += signstr[4::]
         return requrl
 
-    def _create_query_arr(self):
+    def _create_query_arr(self,req):
         query_arr = dict()
         query_arr['appid'] = self.appid
         query_arr['secretid'] = self.secret_id
         query_arr['timestamp'] = str(int(time.time()))
-        query_arr['engine_type'] = '16k_zh'
-        query_arr['voice_format'] = 'wav'
-        query_arr['speaker_diarization'] = 0
-        query_arr['hotword_id'] = ''
-        query_arr['customization_id'] = ''
-        query_arr['filter_dirty'] = 0
-        query_arr['filter_modal'] = 0
-        query_arr['filter_punc'] = 0
-        query_arr['convert_num_mode'] = 1
-        query_arr['word_info'] = 0
-        query_arr['first_channel_only'] = 1
-        query_arr['reinforce_hotword'] = 0
-        query_arr['sentence_max_length'] = 0
+        query_arr['engine_type'] = req.engine_type
+        query_arr['voice_format'] = req.voice_format
+        query_arr['speaker_diarization'] = req.speaker_diarization
+        query_arr['hotword_id'] = req.hotword_id
+        query_arr['customization_id'] = req.customization_id
+        query_arr['filter_dirty'] = req.filter_dirty
+        query_arr['filter_modal'] = req.filter_modal
+        query_arr['filter_punc'] = req.filter_punc
+        query_arr['convert_num_mode'] = req.convert_num_mode
+        query_arr['word_info'] = req.word_info
+        query_arr['first_channel_only'] = req.first_channel_only
+        query_arr['reinforce_hotword'] = req.reinforce_hotword
+        query_arr['sentence_max_length'] = req.sentence_max_length
         return query_arr
 
-    def recognize(self, data):
+    def recognize(self, req,data):
         header = self._build_header()
-        query_arr = self._create_query_arr()
+        query_arr = self._create_query_arr(req)
         req_url = self._build_req_with_signature(query_arr, header)
         r = requests.post(req_url, headers=header, data=data)
         return r.text

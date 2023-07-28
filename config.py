@@ -1,6 +1,6 @@
 
 # Configuration for Tencent ASR and TTS services
-
+# APP_ID = "YOUR_APP_ID"
 # SECRET_ID = "YOUR_SECRET_ID"
 # SECRET_KEY = "YOUR_SECRET_KEY"
 
